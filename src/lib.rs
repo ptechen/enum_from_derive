@@ -73,23 +73,28 @@ fn impl_match_val(
     for variant in &enum_data.variants {
         let ident = &variant.ident;
         let token = quote! {
-                    stringify!(#ident) => Self::#ident
-                };
+            stringify!(#ident) => Self::#ident
+        };
         from_str_tokens.push(token);
         if !data_type.is_empty() {
             if let Some((_, expr)) = &variant.discriminant {
                 index = expr.to_token_stream().to_string().parse::<usize>().unwrap();
                 let token = quote! {
-                            #expr => Self::#ident
-                        };
+                    #expr => Self::#ident
+                };
                 from_int_tokens.push(token);
             } else {
                 let expr =  proc_macro2::TokenStream::from_str(index.to_string().as_str()).unwrap();
                 let token = quote! {
-                            #expr => Self::#ident
-                        };
+                    #expr => Self::#ident
+                };
                 from_int_tokens.push(token);
             }
+            let expr = proc_macro2::TokenStream::from_str(index.to_string().as_str()).unwrap();
+            let token = quote! {
+                stringify!(#expr) => Self::#ident
+            };
+            from_str_tokens.push(token);
             index += 1;
         }
     }

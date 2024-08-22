@@ -16,4 +16,6 @@ fn test() {
     println!("{:?}", t);
     let t = Test::from(100);
     println!("{:?}", t);
+    let t = Test::from("");
+    println!("{:?}", t);
 }
