@@ -1,0 +1,17 @@
+[package]
+name = "enum_from_derive"
+version = "0.1.0"
+edition = "2021"
+homepage = "https://github.com/ptechen"
+documentation = "https://docs.rs/enum_from_derive"
+repository = "https://github.com/ptechen/enum_from_derive.git"
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { version = "1.0.36", features = ["proc-macro"] }
+proc-macro2 = "1.0.86"
+syn = { version = "2.0.75", features = ["full"] }
