@@ -3,7 +3,7 @@
 [![Version info](https://img.shields.io/crates/v/enum_from_derive.svg)](https://crates.io/crates/enum_from_derive)
 [![Downloads](https://img.shields.io/crates/d/enum_from_derive.svg?style=flat-square)](https://crates.io/crates/enum_from_derive)
 [![docs](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://docs.rs/enum_from_derive)
-[![dependency status](https://deps.rs/crate/enum_from_derive/0.1.1/status.svg)](https://deps.rs/crate/enum_from_derive)
+[![dependency status](https://deps.rs/crate/enum_from_derive/0.1.2/status.svg)](https://deps.rs/crate/enum_from_derive)
 
 
 # example:
