@@ -15,6 +15,7 @@
         pub enum Test {
             #[default]
             Name,
+            #[from_str(test)]
             Test = 100,
             TTT,
             FFF = 1000

@@ -2,10 +2,11 @@ extern crate proc_macro;
 
 use proc_macro::{TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Data, DeriveInput, Meta, DataEnum};
+use syn::{parse_macro_input, Data, DeriveInput, Meta, DataEnum, MetaList};
 use std::str::FromStr;
+use syn::spanned::Spanned;
 
-#[proc_macro_derive(From, attributes(default))]
+#[proc_macro_derive(From, attributes(default,from_str))]
 pub fn from_str_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     impl_from(&input)
@@ -60,6 +61,7 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     let token = quote! {
         #(#impl_trait_tokens)*
     };
+    eprintln!("{}", token.to_token_stream());
     TokenStream::from(token)
 }
 
@@ -76,6 +78,18 @@ fn impl_match_val(
             stringify!(#ident) => Self::#ident
         };
         from_str_tokens.push(token);
+        for attr in &variant.attrs {
+            if attr.path().is_ident("from_str") {
+                if let Ok(meta_list) = attr.meta.require_list() {
+                    let expr = &meta_list.tokens;
+                    let token = quote! {
+                        stringify!(#expr) => Self::#ident
+                    };
+                    from_str_tokens.push(token);
+                }
+                break;
+            }
+        }
         if !data_type.is_empty() {
             if let Some((_, expr)) = &variant.discriminant {
                 index = expr.to_token_stream().to_string().parse::<usize>().unwrap();
