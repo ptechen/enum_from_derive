@@ -61,7 +61,6 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     let token = quote! {
         #(#impl_trait_tokens)*
     };
-    eprintln!("{}", token.to_token_stream());
     TokenStream::from(token)
 }
 
