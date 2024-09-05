@@ -2,11 +2,10 @@ extern crate proc_macro;
 
 use proc_macro::{TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Data, DeriveInput, Meta, DataEnum, MetaList};
+use syn::{parse_macro_input, Data, DeriveInput, Meta, DataEnum};
 use std::str::FromStr;
-use syn::spanned::Spanned;
 
-#[proc_macro_derive(From, attributes(default,from_str))]
+#[proc_macro_derive(From, attributes(default,from_str,True,False))]
 pub fn from_str_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     impl_from(&input)
@@ -16,7 +15,8 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     let name = &input.ident;
     let mut from_str_tokens = vec![];
     let mut from_int_tokens = vec![];
-    let mut data_type = proc_macro2::TokenStream::new() ;
+    let mut sync_tokens = vec![];
+    let mut data_type = proc_macro2::TokenStream::new();
     for attr in &input.attrs {
         if attr.path().is_ident("repr") {
             if let Meta::List(meta_list) = &attr.meta {
@@ -27,11 +27,12 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     match &input.data {
         Data::Struct(_) => {}
         Data::Enum(enum_data) => {
-            impl_match_val(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &data_type);
-            impl_default(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &data_type);
+            impl_match_val(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &mut sync_tokens, &data_type);
+            impl_default(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &mut sync_tokens, &data_type);
         }
         Data::Union(_) => {}
     }
+    eprintln!("{:?}", sync_tokens);
     let mut impl_trait_tokens = vec![];
     let token = quote! {
         impl From<&str> for #name {
@@ -57,7 +58,18 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
         impl_trait_tokens.push(token);
     }
 
-
+    if !sync_tokens.is_empty() {
+        let token = quote! {
+            impl #name {
+                pub fn to_bool(&self) -> bool {
+                    match self {
+                        #(#sync_tokens),*
+                    }
+                }
+            }
+        };
+        impl_trait_tokens.push(token);
+    };
     let token = quote! {
         #(#impl_trait_tokens)*
     };
@@ -68,6 +80,7 @@ fn impl_match_val(
     enum_data: &DataEnum,
     from_str_tokens: &mut Vec<proc_macro2::TokenStream>,
     from_int_tokens: &mut Vec<proc_macro2::TokenStream>,
+    sync_tokens: &mut Vec<proc_macro2::TokenStream>,
     data_type: &proc_macro2::TokenStream
 ) {
     let mut index = 0;
@@ -86,7 +99,16 @@ fn impl_match_val(
                     };
                     from_str_tokens.push(token);
                 }
-                break;
+            } else if attr.path().is_ident("True") {
+                let token = quote! {
+                    Self::#ident => true
+                };
+                sync_tokens.push(token);
+            } else if attr.path().is_ident("False") {
+                let token = quote! {
+                    Self::#ident => false
+                };
+                sync_tokens.push(token);
             }
         }
         if !data_type.is_empty() {
@@ -117,6 +139,7 @@ fn impl_default(
     enum_data: &DataEnum,
     from_str_tokens: &mut Vec<proc_macro2::TokenStream>,
     from_int_tokens: &mut Vec<proc_macro2::TokenStream>,
+    sync_tokens: &mut Vec<proc_macro2::TokenStream>,
     data_type: &proc_macro2::TokenStream)
 {
     let mut has_default = false;
@@ -147,4 +170,8 @@ fn impl_default(
             }
         }
     }
+    let token = quote! {
+        _ => false
+    };
+    sync_tokens.push(token);
 }

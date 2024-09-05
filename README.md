@@ -16,8 +16,11 @@
             #[default]
             Name,
             #[from_str(test)]
+            #[False]
             Test = 100,
+            #[False]
             TTT,
+            #[True]
             FFF = 1000
         }
 
@@ -27,6 +30,7 @@
             println!("{:?}", t);
             let t = Test::from(100);
             println!("{:?}", t);
+            println!("{}", a.to_bool())
         }
 
 

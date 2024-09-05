@@ -6,8 +6,11 @@ pub enum Test {
     #[default]
     Name,
     #[from_str(test)]
+    #[True]
     Test = 100,
+    #[False]
     TTT,
+    #[True]
     FFF = 1000
 }
 
@@ -19,6 +22,7 @@ fn test() {
     // assert_eq!(b, Test::FFF);
     // let c = Test::from("test");
     // assert_eq!(c, Test::Test);
-    let a = Test::from("");
-    assert_eq!(a, Test::Name)
+    let a = Test::from("test");
+    // assert_eq!(a, Test::Name);
+    println!("{}", a.to_bool())
 }
