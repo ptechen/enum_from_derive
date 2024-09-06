@@ -32,7 +32,6 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
         }
         Data::Union(_) => {}
     }
-    eprintln!("{:?}", sync_tokens);
     let mut impl_trait_tokens = vec![];
     let token = quote! {
         impl From<&str> for #name {
