@@ -1,11 +1,11 @@
 extern crate proc_macro;
 
-use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Data, DeriveInput, Meta, DataEnum};
 use std::str::FromStr;
+use syn::{parse_macro_input, Data, DataEnum, DeriveInput, Meta};
 
-#[proc_macro_derive(From, attributes(default,from_str,True,False))]
+#[proc_macro_derive(From, attributes(default, from_str, True, False, rate))]
 pub fn from_str_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     impl_from(&input)
@@ -16,6 +16,7 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     let mut from_str_tokens = vec![];
     let mut from_int_tokens = vec![];
     let mut sync_tokens = vec![];
+    let mut is_rate_tokens = vec![];
     let mut data_type = proc_macro2::TokenStream::new();
     for attr in &input.attrs {
         if attr.path().is_ident("repr") {
@@ -27,8 +28,22 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
     match &input.data {
         Data::Struct(_) => {}
         Data::Enum(enum_data) => {
-            impl_match_val(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &mut sync_tokens, &data_type);
-            impl_default(&enum_data, &mut from_str_tokens, &mut from_int_tokens, &mut sync_tokens, &data_type);
+            impl_match_val(
+                &enum_data,
+                &mut from_str_tokens,
+                &mut from_int_tokens,
+                &mut sync_tokens,
+                &mut is_rate_tokens,
+                &data_type,
+            );
+            impl_default(
+                &enum_data,
+                &mut from_str_tokens,
+                &mut from_int_tokens,
+                &mut sync_tokens,
+                &mut is_rate_tokens,
+                &data_type,
+            );
         }
         Data::Union(_) => {}
     }
@@ -46,14 +61,14 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
 
     if !data_type.is_empty() {
         let token = quote! {
-        impl From<#data_type> for #name {
-            fn from(value: #data_type) -> Self {
-                match value {
-                    #(#from_int_tokens),*
+            impl From<#data_type> for #name {
+                fn from(value: #data_type) -> Self {
+                    match value {
+                        #(#from_int_tokens),*
+                    }
                 }
             }
-        }
-    };
+        };
         impl_trait_tokens.push(token);
     }
 
@@ -63,6 +78,12 @@ fn impl_from(input: &DeriveInput) -> TokenStream {
                 pub fn to_bool(&self) -> bool {
                     match self {
                         #(#sync_tokens),*
+                    }
+                }
+
+                pub fn is_rate(&self) -> bool {
+                    match self {
+                        #(#is_rate_tokens),*
                     }
                 }
             }
@@ -80,7 +101,8 @@ fn impl_match_val(
     from_str_tokens: &mut Vec<proc_macro2::TokenStream>,
     from_int_tokens: &mut Vec<proc_macro2::TokenStream>,
     sync_tokens: &mut Vec<proc_macro2::TokenStream>,
-    data_type: &proc_macro2::TokenStream
+    is_rate_tokens: &mut Vec<proc_macro2::TokenStream>,
+    data_type: &proc_macro2::TokenStream,
 ) {
     let mut index = 0;
     for variant in &enum_data.variants {
@@ -108,6 +130,11 @@ fn impl_match_val(
                     Self::#ident => false
                 };
                 sync_tokens.push(token);
+            } else if attr.path().is_ident("rate") {
+                let token = quote! {
+                    Self::#ident => true
+                };
+                is_rate_tokens.push(token);
             }
         }
         if !data_type.is_empty() {
@@ -118,7 +145,7 @@ fn impl_match_val(
                 };
                 from_int_tokens.push(token);
             } else {
-                let expr =  proc_macro2::TokenStream::from_str(index.to_string().as_str()).unwrap();
+                let expr = proc_macro2::TokenStream::from_str(index.to_string().as_str()).unwrap();
                 let token = quote! {
                     #expr => Self::#ident
                 };
@@ -139,8 +166,9 @@ fn impl_default(
     from_str_tokens: &mut Vec<proc_macro2::TokenStream>,
     from_int_tokens: &mut Vec<proc_macro2::TokenStream>,
     sync_tokens: &mut Vec<proc_macro2::TokenStream>,
-    data_type: &proc_macro2::TokenStream)
-{
+    is_rate_tokens: &mut Vec<proc_macro2::TokenStream>,
+    data_type: &proc_macro2::TokenStream,
+) {
     let mut has_default = false;
     for variant in &enum_data.variants {
         for attr in &variant.attrs {
@@ -161,8 +189,8 @@ fn impl_default(
         if let Some(first) = enum_data.variants.first() {
             let ident = &first.ident;
             let token = quote! {
-                    _ => Self::#ident
-                };
+                _ => Self::#ident
+            };
             from_str_tokens.push(token.clone());
             if !data_type.is_empty() {
                 from_int_tokens.push(token);
@@ -172,5 +200,6 @@ fn impl_default(
     let token = quote! {
         _ => false
     };
-    sync_tokens.push(token);
+    sync_tokens.push(token.clone());
+    is_rate_tokens.push(token);
 }
